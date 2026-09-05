@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>BEL Procurement Chain</title>
+<style>
+  :root{
+    --ink:#1A1A1A; --ink-dim:#767676; --ink-faint:#A3A3A3;
+    --line:#C9C9C9; --line-strong:#8C8C8C;
+    --paper:#FFFFFF; --panel:#F4F4F4; --panel-2:#EAEAEA;
+    --chrome:#3A3A3A; --chrome-2:#2A2A2A;
+    --chain:#1B5E4C; --chain-dim:#DCEEE7;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{ margin:0; background:#DADADA; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); display:flex; align-items:flex-start; justify-content:center; min-height:100vh; }
+  a{text-decoration:none; color:inherit;}
+  button{font-family:inherit;}
+  .glyph{ display:inline-flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:700;
+    letter-spacing:0.2px; color:var(--ink-dim); border:1px solid var(--line-strong); width:22px; height:22px;
+    flex-shrink:0; background:var(--paper); }
+  .mono{ font-family:'Courier New',monospace; }
+
+  .device{ width:412px; max-width:100vw; background:var(--panel); min-height:100vh; position:relative;
+    overflow-x:hidden; display:flex; flex-direction:column; }
+  @media (min-width:480px){ body{ padding:28px 0; } .device{ min-height:920px; height:920px; box-shadow:0 8px 28px rgba(0,0,0,0.28); } }
+
+  .statusbar{ height:24px; background:var(--chrome-2); color:#E4E4E4; display:flex; align-items:center;
+    justify-content:space-between; padding:0 16px; font-size:10px; font-weight:600; flex-shrink:0; letter-spacing:0.2px; }
+  .tag-strip{ background:#EFEFEF; color:var(--ink-dim); font-size:9px; padding:5px 16px; display:flex; align-items:center;
+    gap:6px; flex-shrink:0; border-bottom:1px dashed var(--line-strong); text-transform:uppercase; letter-spacing:0.4px; font-weight:700; }
+  .chain-strip{ background:var(--chain); color:#fff; font-size:9px; padding:5px 16px; display:flex; align-items:center;
+    gap:6px; flex-shrink:0; font-weight:700; letter-spacing:0.3px; }
+  .chain-strip .dot{ width:6px; height:6px; border-radius:50%; background:#7FE0BE; flex-shrink:0; animation:pulse 1.8s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  .appbar{ background:var(--chrome); color:#fff; padding:12px 16px 14px; flex-shrink:0; display:flex; align-items:center;
+    gap:12px; position:relative; z-index:5; border-bottom:2px solid var(--ink); }
+  .appbar .back-ic{ cursor:pointer; }
+  .appbar-titles{ flex:1; min-width:0; }
+  .appbar-titles .t1{ font-size:14px; font-weight:700; line-height:1.25; }
+  .appbar-titles .t2{ font-size:9.5px; color:#C4C4C4; margin-top:1px; }
+  .appbar .role-pill{ font-size:9.5px; font-weight:700; padding:5px 9px; border-radius:2px; background:transparent;
+    border:1px solid #666; color:#EDEDED; display:flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; }
+
+  .content{ flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:80px; -webkit-overflow-scrolling:touch; }
+  .content::-webkit-scrollbar{ width:0; }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .legend{ display:flex; padding:8px 16px; font-size:9.5px; color:var(--ink-dim); background:var(--panel-2);
+    border-bottom:1px solid var(--line); align-items:center; }
+  .legend .note{ font-style:italic; }
+
+  .login-screen{ min-height:100%; display:flex; flex-direction:column; background:var(--panel); }
+  .login-hero{ padding:26px 24px 18px; background:var(--chrome); color:#fff; position:relative; border-bottom:2px solid var(--ink); }
+  .login-hero .tagline{ font-size:9px; color:#B8B8B8; letter-spacing:0.4px; margin-bottom:12px; text-transform:uppercase;
+    font-weight:700; border:1px solid #666; display:inline-block; padding:3px 7px; }
+  .login-hero h1{ font-size:18px; margin:0 0 4px; font-weight:700; }
+  .login-hero .h1sub{ font-size:10.5px; color:#B8B8B8; margin:0 0 8px; letter-spacing:0.3px; }
+  .login-hero p{ font-size:10.5px; color:#C4C4C4; margin:0; max-width:290px; line-height:1.5; }
+
+  .login-card{ margin:16px 18px 0; background:var(--paper); border:1px solid var(--line-strong); padding:16px 16px; }
+  .login-card .label{ font-size:10px; font-weight:700; color:var(--ink-dim); margin-bottom:9px; text-transform:uppercase; letter-spacing:0.5px; }
+  .role-options{ display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
+  .role-option{ display:flex; align-items:center; gap:11px; padding:10px 12px; border:1px solid var(--line); cursor:pointer; background:var(--paper); }
+  .role-option .rtxt .rn{ font-size:12.5px; font-weight:700; }
+  .role-option .rtxt .rd{ font-size:9.5px; color:var(--ink-dim); margin-top:1px; line-height:1.35; }
+  .role-option .radio{ margin-left:auto; width:15px; height:15px; border-radius:50%; border:1.5px solid var(--line-strong);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .role-option.selected{ border-color:var(--ink); background:var(--panel-2); }
+  .role-option.selected .radio::after{ content:""; width:7px; height:7px; border-radius:50%; background:var(--ink); }
+
+  .input-field{ width:100%; border:1px solid var(--line-strong); padding:11px 12px; font-size:13px; margin-bottom:9px;
+    background:var(--paper); color:var(--ink); font-family:inherit; }
+  .input-field:focus{ outline:none; border-color:var(--ink); }
+  .input-field::placeholder{ color:var(--ink-faint); }
+  .field-hint{ font-size:9.5px; color:var(--ink-faint); margin:-5px 0 10px; padding-left:1px; }
+
+  .btn-primary{ background:var(--ink); color:#fff; text-align:center; padding:12px; font-size:13px; font-weight:700;
+    cursor:pointer; margin-top:3px; letter-spacing:0.2px; }
+  .btn-primary:active{ background:var(--chrome-2); }
+  .btn-secondary{ background:var(--paper); border:1px dashed var(--chain); text-align:center; padding:10px;
+    font-size:11.5px; font-weight:700; cursor:pointer; color:var(--chain); margin-bottom:9px; display:flex;
+    align-items:center; justify-content:center; gap:7px; }
+  .login-foot{ text-align:center; font-size:9.5px; color:var(--ink-dim); margin-top:14px; line-height:1.55; padding:0 4px; }
+  .demo-tag{ display:inline-block; background:var(--panel-2); color:var(--ink-dim); font-size:9px; font-weight:700;
+    padding:3px 8px; letter-spacing:0.4px; margin-bottom:12px; border:1px solid var(--line-strong); }
+
+  .did-box{ background:var(--chain-dim); border:1px solid var(--chain); padding:9px 10px; margin-bottom:12px; font-size:10px; color:#0F3D31; }
+  .did-box b{ display:block; font-size:10.5px; margin-bottom:2px; }
+
+  .sec-pad{ padding:14px 16px; }
+  .h1{ font-size:15.5px; font-weight:700; margin:0 0 3px; }
+  .sub{ font-size:11px; color:var(--ink-dim); margin:0 0 14px; line-height:1.5; }
+
+  .m-card{ background:var(--paper); border:1px solid var(--line-strong); padding:14px; margin-bottom:12px; position:relative; }
+  .m-card.clickable{ cursor:pointer; }
+  .m-card.clickable:active{ background:var(--panel-2); }
+  .card-head{ display:flex; align-items:center; gap:10px; margin-bottom:11px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  .card-head .txt{ flex:1; min-width:0; }
+  .card-head .txt .ct{ font-size:13px; font-weight:700; line-height:1.3; }
+  .card-head .txt .cs{ font-size:9.5px; color:var(--ink-dim); margin-top:1px; }
+
+  .badge{ font-size:8.5px; font-weight:700; padding:3px 7px; white-space:nowrap; letter-spacing:0.3px;
+    border:1px solid var(--line-strong); color:var(--ink-dim); background:var(--panel-2); }
+  .badge.chain{ border-color:var(--chain); color:var(--chain); background:var(--chain-dim); }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; margin-bottom:10px; background:var(--line); border:1px solid var(--line); }
+  .stat-grid.g3{ grid-template-columns:repeat(3,1fr); }
+  .stat-box{ background:var(--paper); padding:9px 6px; text-align:center; }
+  .stat-box .sl{ font-size:8px; color:var(--ink-dim); font-weight:700; letter-spacing:0.3px; }
+  .stat-box .sv{ font-size:13.5px; font-weight:700; margin-top:3px; font-family:'Courier New',monospace; }
+
+  .p-small{ font-size:10.5px; color:var(--ink-dim); line-height:1.55; margin:0; }
+
+  .chip-row{ display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; margin-bottom:11px; }
+  .chip{ flex-shrink:0; background:var(--paper); border:1px solid var(--line-strong); padding:7px 13px; font-size:10.5px;
+    font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--ink); white-space:nowrap; }
+  .chip.active{ background:var(--ink); border-color:var(--ink); color:#fff; }
+
+  .sheet-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:40; display:none; align-items:flex-end; justify-content:center; }
+  .sheet-backdrop.open{ display:flex; }
+  .sheet{ background:var(--paper); width:100%; max-width:412px; padding:6px 4px 18px; border-top:2px solid var(--ink); max-height:74vh; overflow-y:auto; }
+  .sheet-handle{ width:32px; height:3px; background:var(--line-strong); margin:8px auto 12px; }
+  .sheet-title{ padding:0 16px 9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.5px; font-size:10px; font-weight:700; }
+  .sheet-item{ padding:12px 18px; font-size:13px; display:flex; align-items:center; cursor:pointer; gap:10px; border-bottom:1px solid var(--panel-2); }
+  .sheet-item:active{ background:var(--panel-2); }
+  .sheet-item .sc{ margin-left:auto; color:var(--ink); font-weight:700; }
+  .sheet-item .sd{ font-size:9.5px; color:var(--ink-dim); display:block; margin-top:1px; font-weight:400; }
+
+  .detail-box{ background:var(--panel-2); padding:11px 12px; margin-bottom:11px; border-left:3px solid var(--ink); }
+  .detail-box .dt{ font-weight:700; font-size:12px; margin-bottom:7px; }
+  .detail-row{ display:flex; justify-content:space-between; font-size:10.5px; padding:4px 0; color:var(--ink-dim); border-bottom:1px dotted var(--line); }
+  .detail-row:last-child{ border-bottom:none; }
+  .detail-row b{ color:var(--ink); font-weight:700; }
+
+  /* PO lifecycle stepper */
+  .stepper{ display:flex; align-items:center; margin:12px 0 14px; }
+  .step{ flex:1; text-align:center; position:relative; }
+  .step .sn{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--line-strong); background:var(--paper);
+    display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:var(--ink-dim);
+    margin:0 auto 4px; position:relative; z-index:2; }
+  .step .sl{ font-size:7.5px; color:var(--ink-faint); font-weight:700; letter-spacing:0.2px; line-height:1.3; }
+  .step.done .sn{ background:var(--chain); border-color:var(--chain); color:#fff; }
+  .step.done .sl{ color:var(--chain); }
+  .step.current .sn{ border-color:var(--ink); color:var(--ink); }
+  .step.current .sl{ color:var(--ink); }
+  .step:not(:last-child)::after{ content:""; position:absolute; top:11px; left:50%; width:100%; height:1.5px; background:var(--line-strong); z-index:1; }
+  .step.done:not(:last-child)::after{ background:var(--chain); }
+
+  .action-row{ display:flex; gap:8px; margin-top:2px; flex-wrap:wrap; }
+  .m-btn{ flex:1; min-width:130px; text-align:center; padding:10px 8px; font-size:11px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--line-strong); }
+  .m-btn.filled{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .m-btn.chain-filled{ background:var(--chain); color:#fff; border-color:var(--chain); }
+  .m-btn.outline{ background:var(--paper); border-color:var(--line-strong); color:var(--ink); }
+  .m-btn.disabled{ opacity:0.35; pointer-events:none; }
+
+  table.dtable{ width:100%; border-collapse:collapse; font-size:10px; }
+  table.dtable th{ text-align:left; font-weight:700; color:var(--ink-dim); padding:6px 4px; border-bottom:1.5px solid var(--line-strong);
+    font-size:9px; text-transform:uppercase; letter-spacing:0.3px; }
+  table.dtable td{ padding:9px 4px; border-bottom:1px solid var(--line); }
+  .pill-status{ font-size:8.5px; font-weight:700; padding:2px 6px; border:1px solid var(--line-strong); color:var(--ink-dim); background:var(--panel-2); }
+  .pill-status.chain{ border-color:var(--chain); color:var(--chain); background:var(--chain-dim); }
+  tr.clickable-row{ cursor:pointer; }
+  tr.clickable-row:active{ background:var(--panel-2); }
+
+  .tabs{ display:flex; gap:0; background:var(--panel-2); border:1px solid var(--line-strong); margin-bottom:13px; }
+  .tab{ flex:1; text-align:center; padding:8px 4px; font-size:10.5px; font-weight:700; cursor:pointer; color:var(--ink-dim); border-right:1px solid var(--line-strong); }
+  .tab:last-child{ border-right:none; }
+  .tab.active{ background:var(--ink); color:#fff; }
+
+  .log-item{ display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .log-item:last-child{ border-bottom:none; }
+  .log-dotwrap{ display:flex; flex-direction:column; align-items:center; padding-top:3px; }
+  .log-dotwrap .d{ width:7px; height:7px; border-radius:50%; background:var(--chain); border:1px solid var(--chain); }
+  .log-dotwrap .ln{ width:1px; flex:1; background:var(--line-strong); margin-top:4px; }
+  .log-body .lt{ font-size:11px; font-weight:700; line-height:1.4; }
+  .log-body .lm{ font-size:9.5px; color:var(--ink-dim); margin-top:2px; }
+  .log-body .lh{ font-size:8.5px; color:var(--chain); margin-top:3px; font-family:'Courier New',monospace; }
+
+  .progress{ height:6px; background:var(--panel-2); overflow:hidden; margin-top:6px; border:1px solid var(--line-strong); }
+  .progress > div{ height:100%; background:var(--chain); }
+
+  .bottomnav{ position:absolute; left:0; right:0; bottom:0; height:58px; background:var(--chrome); display:flex; z-index:20; border-top:2px solid var(--ink); }
+  .bn-item{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; color:#9A9A9A; }
+  .bn-item .bl{ font-size:8px; font-weight:700; letter-spacing:0.1px; }
+  .bn-item.active{ color:#fff; }
+  .bn-item.active .glyph{ border-color:#fff; color:#fff; }
+  .bn-item .glyph{ background:transparent; border-color:#7A7A7A; color:#9A9A9A; width:18px; height:18px; }
+
+  .toast{ position:absolute; bottom:74px; left:50%; transform:translateX(-50%) translateY(10px); background:var(--ink);
+    color:#fff; padding:11px 16px; font-size:12px; display:flex; align-items:center; gap:8px; opacity:0; pointer-events:none;
+    transition:all .2s ease; z-index:60; max-width:88%; text-align:center; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.chain{ background:var(--chain); }
+
+  .footnote{ text-align:center; font-size:9px; color:var(--ink-faint); padding:10px 20px 4px; line-height:1.6; }
+  .access-note{ font-size:8.5px; color:var(--ink-faint); margin-top:8px; padding-top:8px; border-top:1px dotted var(--line); }
+  .access-note.chain{ color:var(--chain); border-top-color:var(--chain); }
+
+  .back-screen{ display:none; }
+  .back-screen.active{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="device" id="device">
+
+  <!-- ============ LOGIN ============ -->
+  <div id="screen-login" class="screen active" style="height:100%; overflow-y:auto;">
+    <div class="statusbar"><span>9:41</span><span>LTE 83%</span></div>
+    <div class="login-screen">
+      <div class="login-hero">
+        <div class="tagline">Decentralized identity · Smart contract access control</div>
+        <h1>BEL Procurement Chain</h1>
+        <div class="h1sub">Bharat Electronics Limited · Blockchain-backed SRM</div>
+        <p>BEL-SRM's real procurement workflow, rebuilt on decentralized identity and NFT-based purchase order ownership.</p>
+      </div>
+      <div class="login-card">
+        <div class="label">Sign in as</div>
+        <div class="role-options" id="role-options">
+          <label class="role-option selected" data-role="vendor">
+            <span class="glyph">VEN</span>
+            <span class="rtxt"><span class="rn">Vendor</span><span class="rd">Holds a DID · owns PO-NFTs it's issued</span></span>
+            <span class="radio"></span>
+          </label>
+          <label class="role-option" data-role="purchaser">
+            <span class="glyph">PUR</span>
+            <span class="rtxt"><span class="rn">Purchaser</span><span class="rd">Issues PO-NFTs · confirms GRN on-chain</span></span>
+            <span class="radio"></span>
+          </label>
+          <label class="role-option" data-role="officer">
+            <span class="glyph">FIN</span>
+            <span class="rtxt"><span class="rn">Finance Officer</span><span class="rd">Applies TDS · releases payment on-chain</span></span>
+            <span class="radio"></span>
+          </label>
+        </div>
+        <input class="input-field" type="text" placeholder="User ID (resolves to your DID)">
+        <div class="field-hint">Your User ID resolves to a decentralized identifier (DID) — see it after login.</div>
+        <input class="input-field" type="password" placeholder="Password / wallet signature">
+        <div class="btn-secondary" id="dsc-btn"><span class="glyph" style="border-color:var(--chain); color:var(--chain);">W3</span>Connect wallet &amp; sign challenge</div>
+        <div class="btn-primary" id="login-btn">Log in</div>
+        <div class="login-foot">Every action is gated by an on-chain role check enforced by smart contract.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ APP CHROME ============ -->
+  <div id="app-chrome" style="display:none; height:100%; flex-direction:column;">
+    <div class="statusbar"><span>9:41</span><span>LTE 83%</span></div>
+    <div class="chain-strip"><span class="dot"></span>Connected to BEL Procurement Chain · block <span id="block-num" class="mono">0x4a1f</span></div>
+    <div class="appbar">
+      <span class="back-ic glyph" id="app-back" style="visibility:hidden;">&lt;</span>
+      <div class="appbar-titles">
+        <div class="t1" id="appbar-title">BEL Procurement Chain</div>
+        <div class="t2" id="appbar-sub">Home</div>
+      </div>
+      <span class="role-pill" id="role-pill-btn"><span class="glyph" style="border-color:#666;color:#EDEDED;">R</span><span id="role-chip-label">Vendor</span></span>
+    </div>
+    <div class="legend">
+      <span class="note">Modules outside your role's on-chain access are simply not shown below.</span>
+      <span style="margin-left:auto; color:var(--ink); font-weight:700; cursor:pointer; flex-shrink:0;" id="logout-btn">Log out</span>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- HOME -->
+      <div id="screen-dashboard" class="screen active">
+        <div class="sec-pad" style="padding-bottom:0;">
+          <div class="h1">Home</div>
+          <div class="did-box">
+            <b id="my-did">did:ethr:0xA1a1...vendor</b>
+            Your identity — persists even if you rotate wallets. All PO-NFTs are owned by this DID, not a raw address.
+          </div>
+        </div>
+        <div class="sec-pad" style="padding-top:0;">
+
+          <div class="m-card clickable" data-allow="vendor purchaser officer" data-nav="pos">
+            <div class="card-head">
+              <div class="glyph">PO</div>
+              <div class="txt"><div class="ct">Purchase Orders (NFTs)</div><div class="cs">Each PO is a unique on-chain asset</div></div>
+              <span class="badge chain">On-chain</span>
+            </div>
+            <div class="stat-grid g3">
+              <div class="stat-box"><div class="sl">TOTAL PO-NFTs</div><div class="sv">18</div></div>
+              <div class="stat-box"><div class="sl">MY ACTIVE</div><div class="sv" id="my-active-count">3</div></div>
+              <div class="stat-box"><div class="sl">SETTLED</div><div class="sv">11</div></div>
+            </div>
+            <p class="p-small">Track PO lifecycle: Issued → Delivered → GRN Confirmed → TDS Applied → Paid.</p>
+          </div>
+
+          <div class="m-card clickable" data-allow="purchaser" data-nav="issue">
+            <div class="card-head">
+              <div class="glyph">MINT</div>
+              <div class="txt"><div class="ct">Issue new PO-NFT</div><div class="cs">Mint a PO to a vendor's DID</div></div>
+              <span class="badge chain">Purchaser only</span>
+            </div>
+            <p class="p-small">Awarding a contract mints a new, non-duplicable PO-NFT directly to the winning vendor's identity.</p>
+          </div>
+
+          <div class="m-card clickable" data-allow="officer" data-nav="finance">
+            <div class="card-head">
+              <div class="glyph">FIN</div>
+              <div class="txt"><div class="ct">Payment processing</div><div class="cs">TDS + release, on-chain</div></div>
+              <span class="badge chain">Finance only</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-box"><div class="sl">AWAITING TDS</div><div class="sv">4</div></div>
+              <div class="stat-box"><div class="sl">READY TO PAY</div><div class="sv">2</div></div>
+            </div>
+          </div>
+
+          <div class="m-card clickable" data-allow="vendor purchaser officer" data-nav="audit">
+            <div class="card-head">
+              <div class="glyph">LOG</div>
+              <div class="txt"><div class="ct">Immutable audit trail</div><div class="cs">Every PO event, permanently logged</div></div>
+              <span class="badge chain">On-chain</span>
+            </div>
+            <div class="log-item" style="padding-top:0;">
+              <div class="log-dotwrap"><div class="d"></div></div>
+              <div class="log-body"><div class="lt">PO #0012 — GRN confirmed</div><div class="lh">block 0x4a1f</div></div>
+            </div>
+            <div class="log-item" style="padding-bottom:0;">
+              <div class="log-dotwrap"><div class="d"></div></div>
+              <div class="log-body"><div class="lt">PO #0011 — Payment released</div><div class="lh">block 0x4a1c</div></div>
+            </div>
+          </div>
+
+          <div class="m-card clickable" data-allow="purchaser officer" data-nav="identities">
+            <div class="card-head">
+              <div class="glyph">DID</div>
+              <div class="txt"><div class="ct">Identity registry</div><div class="cs">Vendor DIDs, status, revocation</div></div>
+              <span class="badge chain">Purchaser / Finance</span>
+            </div>
+            <p class="p-small">Every vendor's decentralized identity — active or revoked — resolvable independent of any central login system.</p>
+          </div>
+
+
+        </div>
+      </div>
+
+      <!-- PURCHASE ORDERS LIST -->
+      <div id="screen-pos" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="vendor purchaser officer">
+            <div class="chip-row">
+              <div class="chip active" data-pfilter="all">All</div>
+              <div class="chip" data-pfilter="active">In progress</div>
+              <div class="chip" data-pfilter="paid">Settled</div>
+            </div>
+            <table class="dtable">
+              <tr><th>Token</th><th>Vendor DID</th><th>Status</th></tr>
+              <tr class="clickable-row" data-nav="po-detail"><td class="mono">#0012</td><td class="mono">0xA1a1...vendor</td><td><span class="pill-status chain">GRN Confirmed</span></td></tr>
+              <tr class="clickable-row" data-nav="po-detail"><td class="mono">#0011</td><td class="mono">0xA1a1...vendor</td><td><span class="pill-status">Paid</span></td></tr>
+              <tr class="clickable-row" data-nav="po-detail"><td class="mono">#0009</td><td class="mono">0xB2b2...sagar</td><td><span class="pill-status">Issued</span></td></tr>
+            </table>
+            <div class="access-note chain">Tap any row to open its on-chain lifecycle detail.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PO DETAIL — the core lifecycle screen -->
+      <div id="screen-po-detail" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="vendor purchaser officer">
+            <div class="card-head">
+              <div class="glyph">PO</div>
+              <div class="txt"><div class="ct">PO-NFT #0012</div><div class="cs">Token owner: <span class="mono" id="po-owner-did">did:ethr:0xA1a1...vendor</span></div></div>
+              <span class="badge chain">ERC-721</span>
+            </div>
+
+            <div class="stepper" id="po-stepper">
+              <div class="step done" data-stage="0"><div class="sn">1</div><div class="sl">ISSUED</div></div>
+              <div class="step done" data-stage="1"><div class="sn">2</div><div class="sl">DELIVERED</div></div>
+              <div class="step current" data-stage="2"><div class="sn">3</div><div class="sl">GRN OK</div></div>
+              <div class="step" data-stage="3"><div class="sn">4</div><div class="sl">TDS</div></div>
+              <div class="step" data-stage="4"><div class="sn">5</div><div class="sl">PAID</div></div>
+            </div>
+
+            <div class="detail-box">
+              <div class="detail-row"><span>Item</span><b>Avionics sub-assembly, Batch 4402</b></div>
+              <div class="detail-row"><span>Value</span><b>₹4,20,000</b></div>
+              <div class="detail-row"><span>Issued by</span><b>Purchaser — did:ethr:0xC3c3...officer</b></div>
+              <div class="detail-row"><span>Current state</span><b id="po-current-state">GRN Confirmed</b></div>
+            </div>
+
+            <div class="action-row">
+              <div class="m-btn outline js-po-action" data-allow="vendor" data-stage-req="0" data-next="1" data-msg="Delivery challan uploaded — PO moved to Delivered." data-label="Upload delivery challan">Upload delivery challan</div>
+              <div class="m-btn outline js-po-action" data-allow="purchaser" data-stage-req="1" data-next="2" data-msg="GRN confirmed on-chain — PO moved to GRN Confirmed." data-label="Confirm GRN">Confirm GRN</div>
+              <div class="m-btn outline js-po-action" data-allow="officer" data-stage-req="2" data-next="3" data-msg="TDS applied on-chain — PO moved to TDS Applied." data-label="Apply TDS">Apply TDS</div>
+              <div class="m-btn chain-filled js-po-action" data-allow="officer" data-stage-req="3" data-next="4" data-msg="Payment released on-chain — PO lifecycle complete." data-label="Release payment">Release payment</div>
+            </div>
+            <div class="access-note chain">Each action is gated on-chain: only the correct role, at the correct stage, can advance the PO. Wrong role or wrong stage = transaction reverts.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ISSUE PO (mint) -->
+      <div id="screen-issue" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="purchaser">
+            <div class="card-head">
+              <div class="glyph">MINT</div>
+              <div class="txt"><div class="ct">Issue a new PO-NFT</div><div class="cs">Mints directly to the vendor's DID</div></div>
+            </div>
+            <select class="input-field" id="issue-vendor-select">
+              <option>did:ethr:0xA1a1...vendor — Astra Microwave</option>
+              <option>did:ethr:0xB2b2...sagar — Sagar Defence Eng.</option>
+              <option>did:ethr:0xD4d4...precision — Precision Alloys Ltd.</option>
+            </select>
+            <input class="input-field" id="issue-desc" type="text" placeholder="PO description (e.g. Display unit, 200 units)">
+            <input class="input-field" id="issue-value" type="text" placeholder="PO value (₹)">
+            <div class="action-row">
+              <div class="m-btn chain-filled js-action" data-allow="purchaser" data-msg="PO-NFT minted and assigned to vendor's DID.">Mint PO-NFT</div>
+            </div>
+            <div class="access-note chain">Only an active, verified vendor DID can receive a minted PO — revoked identities are rejected on-chain.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINANCE -->
+      <div id="screen-finance" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="officer">
+            <div class="chip-row">
+              <div class="chip active" data-ffilter="all">All</div>
+              <div class="chip" data-ffilter="tds">Awaiting TDS</div>
+              <div class="chip" data-ffilter="ready">Ready to pay</div>
+            </div>
+            <table class="dtable">
+              <tr><th>Token</th><th>Vendor</th><th>Stage</th></tr>
+              <tr class="clickable-row" data-nav="po-detail"><td class="mono">#0012</td><td>Astra Microwave</td><td><span class="pill-status chain">GRN Confirmed</span></td></tr>
+              <tr class="clickable-row" data-nav="po-detail"><td class="mono">#0013</td><td>Sagar Defence Eng.</td><td><span class="pill-status chain">TDS Applied</span></td></tr>
+            </table>
+            <div class="access-note chain">Open a PO-NFT to apply TDS or release payment — both steps are logged immutably.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUDIT -->
+      <div id="screen-audit" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="vendor purchaser officer">
+            <div class="chip-row">
+              <div class="chip active" data-lfilter="all">All events</div>
+              <div class="chip" data-lfilter="issue">Issuance</div>
+              <div class="chip" data-lfilter="pay">Payments</div>
+            </div>
+            <div id="audit-log-list">
+              <div class="log-item" data-cat="pay"><div class="log-dotwrap"><div class="d"></div><div class="ln"></div></div><div class="log-body"><div class="lt">PO #0012 — GRNConfirmed event</div><div class="lm">Confirmed by Purchaser did:ethr:0xC3c3...officer</div><div class="lh">block 0x4a1f</div></div></div>
+              <div class="log-item" data-cat="pay"><div class="log-dotwrap"><div class="d"></div><div class="ln"></div></div><div class="log-body"><div class="lt">PO #0011 — PaymentReleased event</div><div class="lm">Released by Finance did:ethr:0xE5e5...finance</div><div class="lh">block 0x4a1c</div></div></div>
+              <div class="log-item" data-cat="issue"><div class="log-dotwrap"><div class="d"></div><div class="ln"></div></div><div class="log-body"><div class="lt">PO #0013 — POIssued event</div><div class="lm">Minted to did:ethr:0xB2b2...sagar, value ₹1,15,000</div><div class="lh">block 0x4a19</div></div></div>
+              <div class="log-item" data-cat="issue"><div class="log-dotwrap"><div class="d"></div></div><div class="log-body"><div class="lt">Identity — did:ethr:0xF6f6...vendorX revoked</div><div class="lm">Revoked by PlatformAdmin</div><div class="lh">block 0x4a02</div></div></div>
+            </div>
+            <div class="action-row" style="margin-top:4px;">
+              <div class="m-btn outline js-action" data-allow="vendor purchaser officer" data-msg="Full on-chain event log exported.">Export event log</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDENTITIES -->
+      <div id="screen-identities" class="screen">
+        <div class="sec-pad">
+          <div class="m-card" data-allow="purchaser officer">
+            <div class="card-head">
+              <div class="glyph">DID</div>
+              <div class="txt"><div class="ct">Vendor identity registry</div><div class="cs">Self-sovereign, resolvable on-chain</div></div>
+            </div>
+            <table class="dtable">
+              <tr><th>DID</th><th>Vendor</th><th>Status</th></tr>
+              <tr><td class="mono">0xA1a1...vendor</td><td>Astra Microwave</td><td><span class="pill-status chain">Active</span></td></tr>
+              <tr><td class="mono">0xB2b2...sagar</td><td>Sagar Defence Eng.</td><td><span class="pill-status chain">Active</span></td></tr>
+              <tr><td class="mono">0xF6f6...vendorX</td><td>External vendor X</td><td><span class="pill-status">Revoked</span></td></tr>
+            </table>
+            <div class="action-row">
+              <div class="m-btn outline js-action" data-allow="purchaser officer" data-msg="Identity status toggled on-chain.">Revoke / restore identity</div>
+            </div>
+            <div class="access-note chain">A revoked vendor DID cannot receive new PO-NFTs or advance existing ones — enforced by the contract, not the UI.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <div class="bottomnav">
+      <div class="bn-item active" data-nav="dashboard"><span class="glyph">HM</span><span class="bl">Home</span></div>
+      <div class="bn-item" data-nav="pos" data-allow="vendor purchaser officer"><span class="glyph">PO</span><span class="bl">POs</span></div>
+      <div class="bn-item" data-nav="issue" data-allow="purchaser"><span class="glyph">MT</span><span class="bl">Issue</span></div>
+      <div class="bn-item" data-nav="finance" data-allow="officer"><span class="glyph">FI</span><span class="bl">Finance</span></div>
+      <div class="bn-item" data-nav="audit" data-allow="vendor purchaser officer"><span class="glyph">LG</span><span class="bl">Audit</span></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+</div>
+
+<div class="sheet-backdrop" id="role-sheet-backdrop">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Switch role</div>
+    <div class="sheet-item" data-switch-role="vendor"><span class="glyph">VEN</span><span>Vendor<span class="sd">Owns PO-NFTs via DID</span></span><span class="sc" id="check-vendor"></span></div>
+    <div class="sheet-item" data-switch-role="purchaser"><span class="glyph">PUR</span><span>Purchaser<span class="sd">Issues &amp; confirms GRN</span></span><span class="sc" id="check-purchaser"></span></div>
+    <div class="sheet-item" data-switch-role="officer"><span class="glyph">FIN</span><span>Finance Officer<span class="sd">TDS &amp; payment release</span></span><span class="sc" id="check-officer"></span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var state = { role: 'vendor', poStage: 2 }; // 0 Issued,1 Delivered,2 GRNConfirmed,3 TDSApplied,4 Paid
+  var stageLabels = ['Issued','Delivered','GRN Confirmed','TDS Applied','Paid'];
+  var didByRole = {
+    vendor: 'did:ethr:0xA1a1...vendor',
+    purchaser: 'did:ethr:0xC3c3...officer',
+    officer: 'did:ethr:0xE5e5...finance'
+  };
+  var screenTitles = {
+    dashboard: ['BEL Procurement Chain','Home'],
+    pos: ['Purchase Orders','On-chain PO-NFTs'],
+    'po-detail': ['PO-NFT #0012','Lifecycle detail'],
+    issue: ['Issue PO-NFT','Mint to vendor DID'],
+    finance: ['Payment processing','TDS & release'],
+    audit: ['Audit trail','Immutable event log'],
+    identities: ['Identity registry','Vendor DIDs']
+  };
+  var roleLabels = { vendor:'Vendor', purchaser:'Purchaser', officer:'Finance Officer' };
+
+  function $(sel, ctx){ return (ctx||document).querySelector(sel); }
+  function $all(sel, ctx){ return Array.prototype.slice.call((ctx||document).querySelectorAll(sel)); }
+
+  $all('.role-option').forEach(function(el){
+    el.addEventListener('click', function(){
+      $all('.role-option').forEach(function(o){ o.classList.remove('selected'); });
+      el.classList.add('selected');
+    });
+  });
+
+  $('#dsc-btn').addEventListener('click', function(){ showToast('Wallet connected — challenge signed.', true); });
+
+  $('#login-btn').addEventListener('click', function(){
+    var sel = $('.role-option.selected');
+    state.role = sel ? sel.getAttribute('data-role') : 'vendor';
+    enterApp();
+  });
+
+  function enterApp(){
+    $('#screen-login').style.display = 'none';
+    $('#app-chrome').style.display = 'flex';
+    $('#my-did').textContent = didByRole[state.role];
+    applyRole();
+    navigateTo('dashboard');
+  }
+
+  $('#logout-btn').addEventListener('click', function(){
+    $('#app-chrome').style.display = 'none';
+    $('#screen-login').style.display = 'block';
+  });
+
+  $('#role-pill-btn').addEventListener('click', function(){
+    openSheet('role-sheet-backdrop');
+    updateRoleCheckmarks();
+  });
+  function updateRoleCheckmarks(){
+    ['vendor','purchaser','officer'].forEach(function(r){ $('#check-'+r).textContent = (state.role === r) ? '✓' : ''; });
+  }
+  $all('[data-switch-role]').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.role = el.getAttribute('data-switch-role');
+      $('#my-did').textContent = didByRole[state.role];
+      applyRole();
+      closeAllSheets();
+      showToast('Signed in as ' + roleLabels[state.role] + '.', true);
+      navigateTo('dashboard');
+    });
+  });
+
+  function applyRole(){
+    $('#role-chip-label').textContent = roleLabels[state.role];
+    $all('[data-allow]').forEach(function(el){
+      var allowed = el.getAttribute('data-allow').split(' ');
+      var ok = allowed.indexOf(state.role) !== -1;
+      if(el.classList.contains('m-card') || el.classList.contains('bn-item')){
+        el.style.display = ok ? '' : 'none';
+      } else if(el.classList.contains('js-action') || el.classList.contains('js-po-action')){
+        el.classList.toggle('disabled', !ok);
+      }
+    });
+    var home = document.querySelector('.bn-item[data-nav="dashboard"]');
+    if(home){ home.style.display = ''; }
+    refreshPOActions();
+  }
+
+  function refreshPOActions(){
+    $all('.js-po-action').forEach(function(btn){
+      var reqStage = parseInt(btn.getAttribute('data-stage-req'), 10);
+      var roleOk = btn.getAttribute('data-allow').split(' ').indexOf(state.role) !== -1;
+      var stageOk = state.poStage === reqStage;
+      btn.style.display = (state.poStage <= reqStage || stageOk) ? '' : 'none';
+      // show only the button matching the CURRENT stage; hide future/past ones
+      btn.style.display = stageOk ? '' : 'none';
+      btn.classList.toggle('disabled', !(roleOk && stageOk));
+    });
+    $('#po-current-state').textContent = stageLabels[state.poStage];
+    $all('#po-stepper .step').forEach(function(step){
+      var s = parseInt(step.getAttribute('data-stage'), 10);
+      step.classList.toggle('done', s < state.poStage);
+      step.classList.toggle('current', s === state.poStage);
+    });
+  }
+
+  function navigateTo(name){
+    $all('.screen', $('#content').parentElement).forEach(function(s){ s.classList.remove('active'); });
+    var target = document.getElementById('screen-'+name);
+    if(target){ target.classList.add('active'); }
+    var titles = screenTitles[name] || ['BEL Procurement Chain',''];
+    $('#appbar-title').textContent = titles[0];
+    $('#appbar-sub').textContent = titles[1];
+    $('#app-back').style.visibility = (name === 'dashboard') ? 'hidden' : 'visible';
+    $all('.bn-item').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-nav') === name); });
+    if(name === 'po-detail'){ refreshPOActions(); }
+    $('#content').scrollTop = 0;
+  }
+
+  $all('[data-nav]').forEach(function(el){
+    el.addEventListener('click', function(){ navigateTo(el.getAttribute('data-nav')); });
+  });
+  $('#app-back').addEventListener('click', function(){ navigateTo('dashboard'); });
+
+  $all('.js-action').forEach(function(el){
+    el.addEventListener('click', function(){
+      if(el.classList.contains('disabled')){ showToast('On-chain role check failed — your role can\'t perform this.'); return; }
+      showToast(el.getAttribute('data-msg') || 'Action completed.', true);
+    });
+  });
+
+  $all('.js-po-action').forEach(function(el){
+    el.addEventListener('click', function(){
+      if(el.classList.contains('disabled')){ showToast('On-chain check failed — wrong role or wrong stage.'); return; }
+      var next = parseInt(el.getAttribute('data-next'), 10);
+      state.poStage = next;
+      refreshPOActions();
+      showToast(el.getAttribute('data-msg'), true);
+      bumpBlock();
+    });
+  });
+
+  function bumpBlock(){
+    var el = $('#block-num');
+    var n = parseInt(el.textContent.replace('0x',''), 16) + 1;
+    el.textContent = '0x' + n.toString(16);
+  }
+
+  function openSheet(id){ $('#'+id).classList.add('open'); }
+  function closeAllSheets(){ $all('.sheet-backdrop').forEach(function(s){ s.classList.remove('open'); }); }
+  $all('.sheet-backdrop').forEach(function(bd){ bd.addEventListener('click', function(e){ if(e.target === bd) closeAllSheets(); }); });
+
+  $all('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      var group = c.parentElement;
+      $all('.chip', group).forEach(function(x){ x.classList.remove('active'); });
+      c.classList.add('active');
+    });
+  });
+
+  var toastTimer;
+  function showToast(msg, isChain){
+    var t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('chain', !!isChain);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+})();
+</script>
+</body>
+</html>
